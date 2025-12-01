@@ -135,7 +135,7 @@ The following use cases are fully tested end-to-end:
 
 ## A. Backend: 
 
-### 1. Start Redis 
+### 1. Start Redis (Requires Rancher Desktop/ Docker)
 ```text
    1.docker compose up -d
    2.docker ps -s #ensure redis is running
