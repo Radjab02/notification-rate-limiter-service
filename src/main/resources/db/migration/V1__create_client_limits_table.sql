@@ -6,6 +6,6 @@ CREATE TABLE client_limit_config (
 );
 
 INSERT INTO client_limit_config (client_id, monthly_limit, window_capacity, window_duration_seconds) VALUES
-                         ('client-x', 100, 8, 60),
+                         ('client-x', 100, 8, 5),
                          ('client-y', 5, 10, 60),
-                         ('client-z', 100, 100, 300);
+                         ('client-z', 1000, 1000, 300);

@@ -1,6 +1,6 @@
 package com.corporationxyz.service;
 
-
+import com.corporationxyz.component.RedisKeyGenerator;
 import com.corporationxyz.persistence.entity.ClientLimitConfig;
 import com.corporationxyz.persistence.repository.ClientLimitRepository;
 import io.github.bucket4j.Bandwidth;
@@ -8,28 +8,36 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-
 
 @Service
 public class RateLimitConfigService {
     private final ClientLimitRepository clientLimitRepository;
     private final LettuceBasedProxyManager<String> proxyManager;
+    private final StringRedisTemplate redisTemplate;
+    private final RedisKeyGenerator keyGenerator;
 
-    // Cache for bucket proxies
     private final ConcurrentHashMap<String, Bucket> bucketCache = new ConcurrentHashMap<>();
-
-    // Cache for client limit configs
     private final ConcurrentHashMap<String, ClientLimitConfig> configCache = new ConcurrentHashMap<>();
 
     @Autowired
-    public RateLimitConfigService(ClientLimitRepository clientLimitRepository, LettuceBasedProxyManager<String> proxyManager) {
+    public RateLimitConfigService(ClientLimitRepository clientLimitRepository,
+                                  LettuceBasedProxyManager<String> proxyManager,
+                                  StringRedisTemplate redisTemplate,
+                                  RedisKeyGenerator keyGenerator) {
         this.clientLimitRepository = clientLimitRepository;
         this.proxyManager = proxyManager;
+        this.redisTemplate = redisTemplate;
+        this.keyGenerator = keyGenerator;
     }
 
     public ClientLimitConfig getClientConfiguration(String clientId) {
@@ -46,9 +54,11 @@ public class RateLimitConfigService {
 
     public Bucket resolveBucket(String clientId) {
 
-        return bucketCache.computeIfAbsent(clientId, id -> {
+        String redisKey = generateWindowLimitBucketKey(clientId);
 
-            ClientLimitConfig config = getClientConfiguration(id);
+        return bucketCache.computeIfAbsent(redisKey, key -> {
+
+            ClientLimitConfig config = getClientConfiguration(clientId);
 
             Supplier<BucketConfiguration> bucketConf = () -> BucketConfiguration.builder()
                     .addLimit(Bandwidth.builder()
@@ -59,17 +69,89 @@ public class RateLimitConfigService {
                             .build())
                     .build();
 
-            return proxyManager.builder().build(id, bucketConf);
+            return proxyManager.builder().build(redisKey, bucketConf);
         });
     }
 
     public void reloadBucketAndClientConfig(String clientId) {
         configCache.remove(clientId);
-        bucketCache.remove(clientId);
+        bucketCache.remove(generateWindowLimitBucketKey((clientId)));
+
+        resetMonthlyCounter(clientId);
+        resetWindowCounter(clientId);
     }
 
-    private record ClientConfig(int capacity, Duration refillDuration, long monthlyLimit) {
+    public void resetMonthlyCounter(String clientId) {
+        String pattern = "rate_limit:" + clientId + ":month:*";
+        deleteByPattern(pattern);
+        configCache.remove(clientId);
+        bucketCache.remove(generateWindowLimitBucketKey((clientId)));
+    }
+
+    public void resetWindowCounter(String clientId) {
+        resetBucket(clientId);
+        //String clientPattern = "*:" + clientId + ":*";
+        String clientPattern = "rate_limit:" + clientId + ":window";
+        deleteByPattern(clientPattern);
+
+        String bucketKey = generateWindowLimitBucketKey(clientId);
+        deleteByPattern(bucketKey + "*");
+        configCache.remove(clientId);
+        bucketCache.remove(generateWindowLimitBucketKey((clientId)));
+    }
+
+    record ClientConfig(int capacity, Duration refillDuration, long monthlyLimit) {
+    }
+
+    private String generateWindowLimitBucketKey(String clientId) {
+        return keyGenerator.windowBucketKey(clientId);
+    }
+
+    private void resetBucket(String clientId) {
+        try {
+            proxyManager.removeProxy(clientId);
+            proxyManager.removeProxy(generateWindowLimitBucketKey(clientId));
+        } catch (Exception ignored) {
+        }
+
+//        boolean removedMain = verifyBucketRemoved(clientId);
+//        boolean removedWindow = verifyBucketRemoved(generateWindowLimitBucketKey(clientId));
+//
+//        if (!removedMain) {
+//            System.err.println("[WARN] Bucket state still exists for key: " + clientId);
+//        }
+//
+//        if (!removedWindow) {
+//            System.err.println("[WARN] Bucket state still exists for key: " + generateWindowLimitBucketKey(clientId));
+//        }
+//        private boolean verifyBucketRemoved(String bucketKey) {
+//
+//            String stateKey = bucketKey + ":buckets:state";
+//            String descriptorKey = bucketKey + ":buckets:descriptor";
+//
+//            boolean existsState = redisTemplate.hasKey(stateKey) != null && redisTemplate.hasKey(stateKey);
+//            boolean existsDescriptor = redisTemplate.hasKey(descriptorKey) != null && redisTemplate.hasKey(descriptorKey);
+//
+//            return !(existsState || existsDescriptor);  // true = removed
+//        }
+
+    }
+
+    public void deleteByPattern(String pattern) {
+
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(500)
+                .build();
+
+        RedisConnection connection = redisTemplate.getConnectionFactory().getConnection();
+
+        try (Cursor<byte[]> cursor = connection.scan(options)) {
+            while (cursor.hasNext()) {
+                String key = new String(cursor.next(), StandardCharsets.UTF_8);
+                redisTemplate.delete(key);
+            }
+        }
     }
 }
-
 

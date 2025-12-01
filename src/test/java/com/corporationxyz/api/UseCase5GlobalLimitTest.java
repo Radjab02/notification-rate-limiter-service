@@ -46,7 +46,7 @@ public class UseCase5GlobalLimitTest extends AbstractIntegrationTest {
     void systemEnforcesGlobalLimit() throws Exception {
 
         // Consume global bucket until it blocks
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 1000; i++) { //because our config for global system capacity is 1000
            // System.out.println("i:" + i);
             mockMvc.perform(get("/api/notifications/send")
                             .header("X-Client-ID", "client-u5"))

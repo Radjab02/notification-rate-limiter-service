@@ -44,6 +44,8 @@ public class RateLimitInterceptorTest {
 
     private RateLimitInterceptor interceptor;
 
+    private final RedisKeyGenerator keyGen = new RedisKeyGenerator();
+
     @BeforeEach
     void setup() throws IOException {
         MockitoAnnotations.openMocks(this);
@@ -52,7 +54,7 @@ public class RateLimitInterceptorTest {
         when(response.getWriter()).thenReturn(new java.io.PrintWriter(new java.io.StringWriter()));
 
         // Inject mocks directly using the new constructor that takes globalBucket
-        interceptor = new RateLimitInterceptor(configService, redisTemplate, globalBucket);
+        interceptor = new RateLimitInterceptor(configService, redisTemplate, keyGen, globalBucket);
     }
 
     @Test
