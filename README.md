@@ -100,6 +100,17 @@ CREATE TABLE client_limit_config (
 ); 
 ```
 
+## Access H2 Console
+```text
+   http://localhost:8081/h2-console
+   
+   ```
+## JDBC URL (from config):
+```text
+   jdbc:h2:mem:corp_xyz_db
+```
+
+
 ## 🧪 Tests
 
 The system includes **full integration tests** using:
@@ -129,21 +140,11 @@ The following use cases are fully tested end-to-end:
    1.docker compose up -d
    2.docker ps -s #ensure redis is running
    ```
-### 2. Run Spring Boot
+### 2. Run Spring Boot Application
 ```text
    ./gradlew bootRun or Run from IDE
    
    ```
-### 3. Access H2 Console
-```text
-   http://localhost:8081/h2-console
-   
-   ```
-### 4. JDBC URL (from config):
-```text
-   jdbc:h2:mem:corp_xyz_db
-``` 
-
 
 ## B. Frontend: 
 ```text
