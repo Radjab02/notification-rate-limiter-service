@@ -1,4 +1,4 @@
-## 📡 🔧 Technology Stack
+## 🔧 Technology Stack
 
 * **Java 21**
 * **Spring Boot 3.x**
