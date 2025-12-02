@@ -42,7 +42,6 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private static final String ERROR_GLOBAL_LIMIT_EXCEEDED = "System capacity exceeded. Try again shortly.";
     private static final String ERROR_PER_WINDOW_EXCEEDED = "You have exhausted your request quota within the time window.";
 
-    private static final String REDIS_KEY_PREFIX_MONTHLY = "monthly_limit:";
     private static final String ERROR_MONTHLY_QUOTA_START = "Monthly request quota exceeded. Upgrade your plan (Limit: ";
     private static final String ERROR_MONTHLY_QUOTA_END = ").";
 
@@ -128,17 +127,28 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private boolean checkPerWindowLimit(String clientId, HttpServletResponse response) throws Exception {
         Bucket bucket = rateLimitConfigService.resolveBucket(clientId);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-        log.info("Window Bucket Consumed: {}", probe.getRemainingTokens());
-        if (probe.isConsumed()) {
-            response.addHeader(HEADER_RATE_LIMIT_REMAINING, String.valueOf(probe.getRemainingTokens())); //Soft throttling
+
+        long remaining = probe.getRemainingTokens();
+        log.info("Window Bucket Consumed: {}", remaining);
+
+        // Soft throttle:  slow down, but allow
+        if (probe.isConsumed() && remaining < 5) {   // Soft-throttle threshold
+            Thread.sleep(120);                       // Small delay (120ms)
+            response.addHeader(HEADER_RATE_LIMIT_REMAINING, String.valueOf(remaining));
             return true;
-        } else {
-            long waitForRefillSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
-            response.addHeader(HEADER_RETRY_AFTER_SECONDS, String.valueOf(waitForRefillSeconds)); // Hard throttling
-            sendError(response, HttpStatus.TOO_MANY_REQUESTS,
-                    ERROR_PER_WINDOW_EXCEEDED);
-            return false;
         }
+
+        // Normal allowed request
+        if (probe.isConsumed()) {
+            response.addHeader(HEADER_RATE_LIMIT_REMAINING, String.valueOf(remaining));
+            return true;
+        }
+
+        // Hard throttle — too many requests
+        long waitForRefillSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
+        response.addHeader(HEADER_RETRY_AFTER_SECONDS, String.valueOf(waitForRefillSeconds));
+        sendError(response, HttpStatus.TOO_MANY_REQUESTS, ERROR_PER_WINDOW_EXCEEDED);
+        return false;
     }
 
     private void sendError(HttpServletResponse response, HttpStatus status, String message) throws Exception {

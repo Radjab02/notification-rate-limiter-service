@@ -32,7 +32,6 @@ dependencies {
     implementation 'com.bucket4j:bucket4j_jdk17-lettuce:8.15.0'
     implementation 'com.bucket4j:bucket4j_jdk11-redisson:8.15.0'
     implementation 'org.redisson:redisson:3.32.0'
-    // ✅ MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
 
@@ -40,9 +39,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly 'com.h2database:h2'
-    // ✅ Lombok
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation platform("org.testcontainers:testcontainers-bom:1.19.7")

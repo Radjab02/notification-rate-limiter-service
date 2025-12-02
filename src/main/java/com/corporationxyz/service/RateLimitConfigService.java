@@ -114,27 +114,6 @@ public class RateLimitConfigService {
         } catch (Exception ignored) {
         }
 
-//        boolean removedMain = verifyBucketRemoved(clientId);
-//        boolean removedWindow = verifyBucketRemoved(generateWindowLimitBucketKey(clientId));
-//
-//        if (!removedMain) {
-//            System.err.println("[WARN] Bucket state still exists for key: " + clientId);
-//        }
-//
-//        if (!removedWindow) {
-//            System.err.println("[WARN] Bucket state still exists for key: " + generateWindowLimitBucketKey(clientId));
-//        }
-//        private boolean verifyBucketRemoved(String bucketKey) {
-//
-//            String stateKey = bucketKey + ":buckets:state";
-//            String descriptorKey = bucketKey + ":buckets:descriptor";
-//
-//            boolean existsState = redisTemplate.hasKey(stateKey) != null && redisTemplate.hasKey(stateKey);
-//            boolean existsDescriptor = redisTemplate.hasKey(descriptorKey) != null && redisTemplate.hasKey(descriptorKey);
-//
-//            return !(existsState || existsDescriptor);  // true = removed
-//        }
-
     }
 
     public void deleteByPattern(String pattern) {

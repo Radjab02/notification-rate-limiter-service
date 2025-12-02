@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-12-01T15:28:15+0200",
+    date = "2025-12-02T15:29:49+0200",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.8 (Oracle Corporation)"
 )
 @Component
@@ -42,13 +42,13 @@ public class ClientLimitConfigMapperImpl implements ClientLimitConfigMapper {
             return null;
         }
 
-        ClientLimitConfig clientLimitConfig = new ClientLimitConfig();
+        ClientLimitConfig.ClientLimitConfigBuilder clientLimitConfig = ClientLimitConfig.builder();
 
-        clientLimitConfig.setClientId( dto.getClientId() );
-        clientLimitConfig.setMonthlyLimit( dto.getMonthlyLimit() );
-        clientLimitConfig.setWindowCapacity( dto.getWindowCapacity() );
-        clientLimitConfig.setWindowDurationSeconds( dto.getWindowDurationSeconds() );
+        clientLimitConfig.clientId( dto.getClientId() );
+        clientLimitConfig.monthlyLimit( dto.getMonthlyLimit() );
+        clientLimitConfig.windowCapacity( dto.getWindowCapacity() );
+        clientLimitConfig.windowDurationSeconds( dto.getWindowDurationSeconds() );
 
-        return clientLimitConfig;
+        return clientLimitConfig.build();
     }
 }
